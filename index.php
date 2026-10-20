@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sistem Pelaporan Menu MBG - SPPG</title>
+  <title>SPPG Sumber Payung</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -68,20 +68,33 @@
 
     <!-- ADMIN VIEW -->
     <div id="adminView" class="hidden space-x-0 space-y-6">
-      <div class="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-4 rounded-xl shadow-sm border border-slate-200 gap-4">
         <div class="flex items-center space-x-3">
           <span class="bg-amber-100 text-amber-800 text-xs font-semibold px-2.5 py-1 rounded-full">Panel Admin</span>
           <h2 class="text-lg font-bold">Kelola Data Menu</h2>
         </div>
-        <button onclick="openFormModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center space-x-2 shadow">
-          <i class="fa-solid fa-plus"></i><span>Tambah Menu Baru</span>
-        </button>
+        
+        <!-- Area Kontrol Admin (Filter & Tambah) -->
+        <div class="flex items-center space-x-2 w-full sm:w-auto">
+          <!-- Filter Tanggal Admin -->
+          <div class="flex items-center bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-sm w-full sm:w-auto">
+            <label for="adminFilterDate" class="text-slate-400 mr-2"><i class="fa-solid fa-filter"></i></label>
+            <input type="date" id="adminFilterDate" onchange="renderAdminTable()" class="bg-transparent text-slate-700 focus:outline-none cursor-pointer text-xs sm:text-sm w-full">
+            <button onclick="clearAdminFilter()" class="ml-2 text-slate-400 hover:text-rose-500 transition" title="Tampilkan Semua Data">
+              <i class="fa-solid fa-circle-xmark"></i>
+            </button>
+          </div>
+          <!-- Tombol Tambah -->
+          <button onclick="openFormModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg text-sm font-medium transition flex items-center space-x-2 shadow whitespace-nowrap">
+            <i class="fa-solid fa-plus"></i><span class="hidden sm:inline">Tambah Menu</span>
+          </button>
+        </div>
       </div>
       <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <div class="overflow-x-auto">
           <table class="w-full text-sm text-left text-slate-600">
             <thead class="text-xs uppercase bg-slate-100 border-b border-slate-200 text-slate-700">
-              <tr><th class="px-4 py-3">Tanggal</th><th class="px-4 py-3">Jenis Porsi</th><th class="px-4 py-3">Jumlah Porsi</th><th class="px-4 py-3">Daftar Menu</th><th class="px-4 py-3">Gizi (Energi)</th><th class="px-4 py-3 text-center">Aksi</th></tr>
+              <tr><th class="px-4 py-3">Tanggal</th><th class="px-4 py-3">Jenis Porsi</th><th class="px-4 py-3">Jumlah Porsi</th><th class="px-4 py-3">Daftar Menu</th><th class="px-4 py-3">Gizi (EPLKS)</th><th class="px-4 py-3 text-center">Aksi</th></tr>
             </thead>
             <tbody id="adminTableBody" class="divide-y divide-slate-100"></tbody>
           </table>
@@ -177,7 +190,17 @@
     let chartInstance = null;
 
     window.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('selectedDate').value = new Date().toISOString().split('T')[0];
+      const date = new Date();
+      // Mengurangi waktu dengan selisih zona waktu lokal
+      const localDate = new Date(date.getTime() - (date.getTimezoneOffset() * 60000))
+        .toISOString()
+        .split('T')[0];
+
+      document.getElementById('selectedDate').value = localDate;
+      
+      // Tambahkan baris ini untuk filter Admin:
+      document.getElementById('adminFilterDate').value = localDate;
+
       fetchData();
     });
 
@@ -377,19 +400,40 @@
     // RENDER ADMIN
     // ==========================================
     function renderAdminTable() {
-      const tbody = document.getElementById('adminTableBody'); tbody.innerHTML = '';
-      if (rawDatabase.length === 0) { tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-8 text-center text-slate-400">Belum ada data</td></tr>`; return; }
-      rawDatabase.forEach(item => {
+      const tbody = document.getElementById('adminTableBody'); 
+      tbody.innerHTML = '';
+      
+      // Ambil nilai tanggal dari input filter admin
+      const filterDate = document.getElementById('adminFilterDate').value;
+      
+      // Filter database berdasarkan tanggal, jika input kosong maka tampilkan semua
+      let filteredDatabase = rawDatabase;
+      if (filterDate !== '') {
+        filteredDatabase = rawDatabase.filter(item => item.tanggal === filterDate);
+      }
+
+      if (filteredDatabase.length === 0) { 
+        tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-8 text-center text-slate-400">Belum ada data ${filterDate ? 'pada tanggal ini' : ''}</td></tr>`; 
+        return; 
+      }
+      
+      filteredDatabase.forEach(item => {
         const tr = document.createElement('tr'); tr.className = 'hover:bg-slate-50 transition';
         tr.innerHTML = `<td class="px-4 py-3 font-medium">${item.tanggal}</td>
           <td class="px-4 py-3"><span class="bg-emerald-100 text-emerald-800 text-xs px-2 py-0.5 rounded-full">${item.porsi}</span></td>
-          <td class="px-4 py-3">${item.jumlahPorsi} Box</td><td class="px-4 py-3 max-w-xs truncate">${item.menu}</td><td class="px-4 py-3 text-xs">${item.energi} kkal</td>
+          <td class="px-4 py-3">${item.jumlahPorsi} Box</td><td class="px-4 py-3 text-xs">${item.menu}</td><td class="px-4 py-3 text-xs">${item.energi} kkal, ${item.protein} g, ${item.lemak} g, ${item.karbohidrat} g, ${item.serat} g</td>
           <td class="px-4 py-3 text-center space-x-3">
             <button onclick="editData(${item.rowIndex})" class="text-blue-600 hover:text-blue-800"><i class="fa-solid fa-pen-to-square"></i></button>
             <button onclick="deleteData(${item.rowIndex})" class="text-rose-600 hover:text-rose-800"><i class="fa-solid fa-trash"></i></button>
           </td>`;
         tbody.appendChild(tr);
       });
+    }
+
+    // Fungsi untuk menghapus filter (Menampilkan semua tanggal)
+    function clearAdminFilter() {
+      document.getElementById('adminFilterDate').value = '';
+      renderAdminTable();
     }
 
     function openFormModal(editItem = null) {
