@@ -22,13 +22,17 @@
       
       <!-- Bagian Kiri: Logo -->
       <div class="flex items-center space-x-3">
-        <div class="bg-white p-2 rounded-full text-emerald-700 shadow flex-shrink-0">
+        <!-- Tambahkan id="logoContainer" dan ukuran pasti (w-10 h-10) agar bundar sempurna -->
+        <div id="logoContainer" class="bg-white p-0.5 rounded-full text-emerald-700 shadow flex-shrink-0 w-10 h-10 flex items-center justify-center overflow-hidden">
+          <!-- Icon default sebelum data dimuat -->
           <i class="fa-solid fa-utensils text-xl"></i>
         </div>
+        
         <!-- Teks Judul: Hanya tampil di layar tablet/desktop (sm:block) -->
         <div class="hidden sm:block">
-          <h1 class="font-bold text-lg leading-tight">SPPG MBG Mandiri</h1>
-          <p class="text-xs text-emerald-200">Pelaporan Menu Makan Bergizi Gratis</p>
+          <!-- Tambahkan id untuk nama dan alamat -->
+          <h1 id="headerNama" class="font-bold text-lg leading-tight">Memuat data...</h1>
+          <p id="headerAlamat" class="text-xs text-emerald-200">Menunggu sambungan server...</p>
         </div>
       </div>
 
@@ -84,6 +88,12 @@
               <i class="fa-solid fa-circle-xmark"></i>
             </button>
           </div>
+
+          <!-- Tombol Edit Profil Baru -->
+          <button onclick="openProfilModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-sm font-medium transition flex items-center space-x-2 shadow whitespace-nowrap">
+            <i class="fa-solid fa-building"></i><span class="hidden sm:inline">Edit Profil</span>
+          </button>
+
           <!-- Tombol Tambah -->
           <button onclick="openFormModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg text-sm font-medium transition flex items-center space-x-2 shadow whitespace-nowrap">
             <i class="fa-solid fa-plus"></i><span class="hidden sm:inline">Tambah Menu</span>
@@ -113,7 +123,7 @@
           <p class="text-xs text-slate-500">Buka aplikasi Google Authenticator di HP Anda dan masukkan 6 digit angka yang muncul.</p>
         </div>
         <div>
-          <input type="text" id="adminPin" maxlength="6" placeholder="Masukkan OTP" class="w-full border-2 border-emerald-100 rounded-lg px-4 py-3 text-center text-2xl font-bold tracking-[0.5em] focus:border-emerald-500 focus:ring-0 outline-none transition">
+          <input type="text" id="adminPin" maxlength="6" placeholder="Masukkan OTP" onkeydown="if(event.key === 'Enter') submitLogin()" class="w-full border-2 border-emerald-100 rounded-lg px-4 py-3 text-center text-2xl font-bold tracking-[0.5em] focus:border-emerald-500 focus:ring-0 outline-none transition">
         </div>
         <div class="flex justify-end space-x-2 mt-4">
           <button onclick="toggleAuthModal()" class="w-1/2 py-2.5 rounded-lg text-sm text-slate-600 hover:bg-slate-100 font-medium transition">Batal</button>
@@ -178,18 +188,71 @@
     </div>
   </div>
 
+  <!-- Modal Edit Profil -->
+  <div id="profilModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+    <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md mx-4">
+      <h3 class="text-lg font-bold text-slate-800 mb-4">Edit Profil SPPG</h3>
+      <form id="profilForm" onsubmit="handleProfilSubmit(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Organisasi / Katering</label>
+          <input type="text" id="formProfilNama" required class="w-full border rounded-lg px-3 py-2 text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Alamat Lengkap</label>
+          <textarea id="formProfilAlamat" required rows="2" class="w-full border rounded-lg px-3 py-2 text-sm"></textarea>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Upload Logo Baru (Opsional)</label>
+          <input type="file" id="formProfilLogo" accept="image/*" class="w-full border rounded-lg px-3 py-1.5 text-sm bg-slate-50">
+          <p class="text-xs text-amber-600 mt-1">Biarkan kosong jika tidak ingin mengubah logo saat ini.</p>
+        </div>
+        <div class="flex justify-end space-x-2 pt-2 border-t mt-4">
+          <button type="button" onclick="closeProfilModal()" class="px-4 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-100">Batal</button>
+          <button type="submit" class="px-4 py-2 rounded-lg text-sm bg-blue-600 text-white font-medium hover:bg-blue-700">Simpan Profil</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script>
     // ==========================================
     // KONFIGURASI API
     // ==========================================
-    const API_URL = 'https://script.google.com/macros/s/AKfycbwiQBf1S-gt1y_4nYuTvcofQlxILMAo8AOeZXljwW1rtvxUjqIujAtCEHfNFLAB-Wkcfw/exec'; // <--- GANTI INI DENGAN URL DEPLOYMENT BARU ANDA
+    
+    // Convert API_URL ke Base64
+    const ENCODE_API = "aHR0cHM6Ly9zY3JpcHQuZ29vZ2xlLmNvbS9tYWNyb3Mvcy9BS2Z5Y2J5WV9DYW04WFFHS0x5TlJDRTBnN0RUaTdWS203OWF0TFBXRlREY3BKWkRkb292Z29rcnhkcW43SmNVYjdGdlVzZllsdy9leGVj";
+
+    // Fungsi bawaan JS untuk decode (atob) saat script berjalan
+    const API_URL = atob(ENCODE_API);
     
     let rawDatabase = [];
     let activeTab = 'Kecil';
     let isAdmin = false;
     let chartInstance = null;
+    let currentProfil = {};
+
+    function checkLoginStatus() {
+      const currentToken = sessionStorage.getItem('adminToken');
+      
+      if (currentToken) {
+        isAdmin = true;
+        document.getElementById('authBtn').innerHTML = `<i class="fa-solid fa-right-from-bracket"></i><span class="hidden sm:inline">Keluar Admin</span>`;
+        document.getElementById('adminView').classList.remove('hidden'); 
+        document.getElementById('publicView').classList.add('hidden'); 
+        document.getElementById('publicDateContainer').classList.add('hidden'); 
+      } else {
+        isAdmin = false;
+        document.getElementById('authBtn').innerHTML = `<i class="fa-solid fa-lock"></i><span class="hidden sm:inline">Login Admin</span>`;
+        document.getElementById('adminView').classList.add('hidden'); 
+        document.getElementById('publicView').classList.remove('hidden'); 
+        document.getElementById('publicDateContainer').classList.remove('hidden'); 
+      }
+    }
 
     window.addEventListener('DOMContentLoaded', () => {
+      // Panggil fungsi cek login pertama kali halaman dimuat
+      checkLoginStatus();
+
       const date = new Date();
       // Mengurangi waktu dengan selisih zona waktu lokal
       const localDate = new Date(date.getTime() - (date.getTimezoneOffset() * 60000))
@@ -218,11 +281,51 @@
       showLoading("Memuat data dari Google Sheets...");
       try {
         const res = await fetch(`${API_URL}?action=getData`);
-        rawDatabase = await res.json();
+        const result = await res.json(); // Menyimpan respon mentah
+        
+        // Panggil fungsi render header jika data profil dikirim dari backend
+        if (result.profil) {
+          currentProfil = result.profil; 
+          renderHeaderProfile(result.profil);
+        }
+
+        // Asumsi data array menu Anda ada di result.data (sesuaikan dengan output API Anda)
+        rawDatabase = result.data || result; 
+        
         hideLoading();
-        if (!isAdmin) { document.getElementById('publicView').classList.remove('hidden'); renderPublicView(); } 
-        else { document.getElementById('adminView').classList.remove('hidden'); renderAdminTable(); }
-      } catch (err) { hideLoading(); alert('Gagal memuat data: Pastikan API URL benar.'); }
+        if (!isAdmin) { 
+          document.getElementById('publicView').classList.remove('hidden'); 
+          renderPublicView(); 
+        } else { 
+          document.getElementById('adminView').classList.remove('hidden'); 
+          renderAdminTable(); 
+        }
+      } catch (err) { 
+        hideLoading(); 
+        alert('Gagal memuat data: Pastikan API URL benar.'); 
+      }
+    }
+
+    // ==========================================
+    // RENDER HEADER
+    // ==========================================
+    function renderHeaderProfile(dataProfil) {
+      // 1. Ubah Nama (H1)
+      if (dataProfil.nama) {
+        document.getElementById('headerNama').innerText = dataProfil.nama;
+      }
+      
+      // 2. Ubah Alamat (P)
+      if (dataProfil.alamat) {
+        document.getElementById('headerAlamat').innerText = dataProfil.alamat;
+      }
+      
+      // 3. Ubah Logo (Jika URL gambar tersedia, ganti icon dengan tag <img>)
+      if (dataProfil.logoUrl) {
+        document.getElementById('logoContainer').innerHTML = `
+          <img src="${dataProfil.logoUrl}" alt="Logo" class="w-full h-full object-cover rounded-full">
+        `;
+      }
     }
 
     // ==========================================
@@ -345,17 +448,37 @@
     // ==========================================
     // LOGIKA LOGIN AUTHENTICATOR
     // ==========================================
-    function toggleAuthModal() {
+    async function toggleAuthModal() { 
       if (isAdmin) {
-        // Proses Keluar (Logout) Admin
+        // --- 1. AMBIL TOKEN & BERITAHU SERVER UNTUK MENGHAPUSNYA ---
+        const currentToken = sessionStorage.getItem('adminToken');
+        if (currentToken) {
+          showLoading("Keluar...");
+          try {
+            await fetch(API_URL, {
+              method: 'POST',
+              body: JSON.stringify({
+                action: 'logout',
+                token: currentToken
+              })
+            });
+          } catch (e) {
+            console.error("Gagal menghubungi server untuk logout:", e);
+          } finally {
+            hideLoading();
+          }
+        }
+
+        // --- 2. LANJUTKAN PROSES LOGOUT UI ANDA SEPERTI BIASA ---
         isAdmin = false; 
+        sessionStorage.removeItem('adminToken');
         document.getElementById('authBtn').innerHTML = `<i class="fa-solid fa-lock"></i><span class="hidden sm:inline">Login Admin</span>`;
         document.getElementById('adminView').classList.add('hidden'); 
         document.getElementById('publicView').classList.remove('hidden'); 
         document.getElementById('publicDateContainer').classList.remove('hidden'); 
         renderPublicView();
       } else { 
-        // Proses Buka / Tutup Modal Login
+        // Proses Buka / Tutup Modal Login (Tidak ada yang dirubah di bagian ini)
         const authModal = document.getElementById('authModal');
         if (authModal.classList.contains('hidden')) {
           authModal.classList.remove('hidden'); // Buka modal
@@ -381,6 +504,9 @@
         const result = await res.json();
         
         if (result.status === 'success') {
+
+          sessionStorage.setItem('adminToken', result.token);
+
           isAdmin = true; 
           document.getElementById('authModal').classList.add('hidden'); 
           document.getElementById('adminPin').value = '';
@@ -469,9 +595,38 @@
 
     async function deleteData(r) {
       if (!confirm('Hapus baris data ini dari sistem?')) return;
+      
+      // Ambil token dari Session Storage
+      const currentToken = sessionStorage.getItem('adminToken');
+      if (!currentToken) {
+        alert("Sesi login tidak ditemukan. Silakan login ulang.");
+        location.reload();
+        return;
+      }
+
       showLoading("Menghapus...");
-      try { await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'deleteData', rowIndex: r }) }); fetchData(); } 
-      catch (e) { hideLoading(); alert('Gagal menghapus.'); }
+      try { 
+        const res = await fetch(API_URL, { 
+          method: 'POST', 
+          body: JSON.stringify({ 
+            action: 'deleteData', 
+            rowIndex: r,
+            token: currentToken // <- Sisipkan token di sini
+          }) 
+        }); 
+        
+        const result = await res.json();
+        if (result.status === 'error') {
+          alert(result.message);
+          // Paksa user login ulang jika pesan error adalah tentang akses ditolak
+          if(result.message.includes("Akses Ditolak")) location.reload();
+        } else {
+          fetchData(); 
+        }
+      } catch (e) { 
+        hideLoading(); 
+        alert('Gagal menghapus.'); 
+      }
     }
 
     // ==========================================
@@ -480,6 +635,15 @@
     async function handleFormSubmit(e) {
       e.preventDefault();
       closeFormModal();
+      
+      // Ambil token dari Session Storage
+      const currentToken = sessionStorage.getItem('adminToken');
+      if (!currentToken) {
+        alert("Sesi login tidak ditemukan. Silakan login ulang.");
+        location.reload();
+        return;
+      }
+
       showLoading("Sedang mengunggah foto ke Google Drive & menyimpan data...");
 
       const fileInput = document.getElementById('formFotoFile');
@@ -506,9 +670,94 @@
       };
 
       try {
-        await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'saveData', data: formData }) });
-        fetchData(); 
-      } catch (err) { hideLoading(); alert('Gagal menyimpan.'); }
+        const res = await fetch(API_URL, { 
+          method: 'POST', 
+          body: JSON.stringify({ 
+            action: 'saveData', 
+            data: formData,
+            token: currentToken // <- Sisipkan token di sini
+          }) 
+        });
+        
+        const result = await res.json();
+        if (result.status === 'error') {
+          alert(result.message);
+          if(result.message.includes("Akses Ditolak")) location.reload();
+        } else {
+          fetchData(); 
+        }
+      } catch (err) { 
+        hideLoading(); 
+        alert('Gagal menyimpan.'); 
+      }
+    }
+
+    // ==========================================
+    // LOGIKA MODAL PROFIL
+    // ==========================================
+    function openProfilModal() {
+      document.getElementById('profilModal').classList.remove('hidden');
+      // Isi otomatis form dengan data saat ini
+      document.getElementById('formProfilNama').value = currentProfil.nama || '';
+      document.getElementById('formProfilAlamat').value = currentProfil.alamat || '';
+      document.getElementById('formProfilLogo').value = ''; // Kosongkan file input
+    }
+
+    function closeProfilModal() {
+      document.getElementById('profilModal').classList.add('hidden');
+    }
+
+    async function handleProfilSubmit(e) {
+      e.preventDefault();
+      closeProfilModal();
+      
+      // Ambil token dari Session Storage
+      const currentToken = sessionStorage.getItem('adminToken');
+      if (!currentToken) {
+        alert("Sesi login tidak ditemukan. Silakan login ulang.");
+        location.reload();
+        return;
+      }
+
+      showLoading("Menyimpan data profil & mengunggah logo...");
+
+      const fileInput = document.getElementById('formProfilLogo');
+      let fotoFileData = null;
+      
+      if (fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        const base64full = await getBase64(file);
+        fotoFileData = { filename: "LOGO_" + file.name, mimeType: file.type, base64: base64full.split(',')[1] };
+      }
+
+      const formData = {
+        nama: document.getElementById('formProfilNama').value,
+        alamat: document.getElementById('formProfilAlamat').value,
+        logoUrl: currentProfil.logoUrl,
+        fotoFile: fotoFileData
+      };
+
+      try {
+        const res = await fetch(API_URL, { 
+          method: 'POST', 
+          body: JSON.stringify({ 
+            action: 'saveProfil', 
+            data: formData,
+            token: currentToken // <- Sisipkan token di sini
+          }) 
+        });
+        
+        const result = await res.json();
+        if (result.status === 'error') {
+          alert(result.message);
+          if(result.message.includes("Akses Ditolak")) location.reload();
+        } else {
+          fetchData(); 
+        }
+      } catch (err) { 
+        hideLoading(); 
+        alert('Gagal menyimpan profil.'); 
+      }
     }
   </script>
 </body>
